@@ -1,0 +1,11 @@
+node_modules/
+.env
+.env_fixed
+models.json
+scripts/seedBigData.js
+scripts/seedREST.js
+scripts/testModelAccess.js
+scripts/listModels.js
+scripts/createTestUser.js
+.DS_Store
+*.log

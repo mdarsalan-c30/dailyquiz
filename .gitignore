@@ -1,0 +1,9 @@
+node_modules/
+daily_q_app/build/
+daily_q_app/.dart_tool/
+daily_q_app/android/.gradle/
+daily_q_app/.flutter-plugins
+daily_q_app/.flutter-plugins-dependencies
+.env
+*.apk
+.gemini/
