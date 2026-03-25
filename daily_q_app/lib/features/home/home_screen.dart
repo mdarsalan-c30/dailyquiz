@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:daily_q_app/core/ad_helper.dart';
 import 'package:daily_q_app/core/api_service.dart';
 import 'package:daily_q_app/core/auth_provider.dart';
 import 'package:daily_q_app/features/quiz/quiz_screen.dart';
@@ -16,11 +16,38 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   Map<String, dynamic>? stats;
   bool isLoading = true;
+  BannerAd? _bannerAd;
+  bool _isBannerAdLoaded = false;
 
   @override
   void initState() {
     super.initState();
     _fetchStats();
+    _loadBannerAd();
+  }
+
+  void _loadBannerAd() {
+    _bannerAd = BannerAd(
+      adUnitId: AdHelper.bannerAdUnitId,
+      request: const AdRequest(),
+      size: AdSize.banner,
+      listener: BannerAdListener(
+        onAdLoaded: (_) {
+          setState(() {
+            _isBannerAdLoaded = true;
+          });
+        },
+        onAdFailedToLoad: (ad, err) {
+          ad.dispose();
+        },
+      ),
+    )..load();
+  }
+
+  @override
+  void dispose() {
+    _bannerAd?.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchStats() async {
@@ -126,6 +153,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   label: const Text('Logout', style: TextStyle(color: Colors.red)),
                 ),
               ],
+              const SizedBox(height: 32),
+              if (_isBannerAdLoaded)
+                SizedBox(
+                  width: _bannerAd!.size.width.toDouble(),
+                  height: _bannerAd!.size.height.toDouble(),
+                  child: AdWidget(ad: _bannerAd!),
+                ),
+              const SizedBox(height: 16),
             ],
           ),
         ),

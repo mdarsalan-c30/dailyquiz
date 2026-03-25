@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:daily_q_app/core/ad_helper.dart';
 import 'package:daily_q_app/core/api_service.dart';
 import 'package:daily_q_app/core/auth_provider.dart';
 
@@ -15,6 +17,7 @@ class _PlayQuizScreenState extends ConsumerState<PlayQuizScreen> {
   List<dynamic> questions = [];
   int currentIndex = 0;
   int score = 0;
+  InterstitialAd? _interstitialAd;
   
   int? selectedOption;
   bool isSubmitted = false;
@@ -81,6 +84,11 @@ class _PlayQuizScreenState extends ConsumerState<PlayQuizScreen> {
   }
 
   void _showResultDialog() {
+    if (_interstitialAd != null) {
+      _interstitialAd!.show();
+      _loadInterstitialAd(); // Load next one for "Play Again"
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,

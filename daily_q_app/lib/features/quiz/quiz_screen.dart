@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:daily_q_app/core/ad_helper.dart';
 import 'package:daily_q_app/core/api_service.dart';
 import 'package:daily_q_app/core/auth_provider.dart';
 
@@ -17,6 +16,35 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   bool isCorrect = false;
   String? correctAnswer;
   bool isLoading = true;
+  InterstitialAd? _interstitialAd;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchQuiz();
+    _loadInterstitialAd();
+  }
+
+  void _loadInterstitialAd() {
+    InterstitialAd.load(
+      adUnitId: AdHelper.interstitialAdUnitId,
+      request: const AdRequest(),
+      adLoadCallback: InterstitialAdLoadCallback(
+        onAdLoaded: (ad) {
+          _interstitialAd = ad;
+        },
+        onAdFailedToLoad: (err) {
+          _interstitialAd = null;
+        },
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _interstitialAd?.dispose();
+    super.dispose();
+  }
 
   Map<String, dynamic>? quizData;
 
@@ -260,7 +288,16 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
 
   Widget _buildActionButton() {
     return ElevatedButton(
-      onPressed: selectedOption == null ? null : (isSubmitted ? () => Navigator.pop(context) : _submitAnswer),
+      onPressed: selectedOption == null 
+          ? null 
+          : (isSubmitted 
+              ? () {
+                  if (_interstitialAd != null) {
+                    _interstitialAd!.show();
+                  }
+                  Navigator.pop(context, true);
+                } 
+              : _submitAnswer),
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
