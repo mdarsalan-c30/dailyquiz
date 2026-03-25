@@ -4,4 +4,4 @@ const path = require('path');
 process.chdir(path.join(__dirname, 'backend'));
 
 // Require the actual backend entry point
-require('./app.js');
+require('./backend/app.js');
