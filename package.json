@@ -1,0 +1,9 @@
+{
+  "name": "qwizo-root",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "npm install --prefix backend",
+    "start": "npm start --prefix backend",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
