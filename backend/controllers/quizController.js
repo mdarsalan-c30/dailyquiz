@@ -77,28 +77,22 @@ exports.submitAnswer = async (req, res) => {
         if (is_correct) {
             pointsEarned = 10;
             
-            // Get current streak and last active date
-            const { rows: uRows } = await pool.query('SELECT streak, last_active_date FROM users WHERE id = $1', [userId]);
-            const user = uRows[0];
-            
-            const today = new Date().toISOString().split('T')[0];
-            const lastDate = user.last_active_date ? user.last_active_date.toISOString().split('T')[0] : null;
-            
-            let newStreak = user.streak || 0;
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-            if (lastDate === yesterdayStr) {
-                newStreak += 1;
-            } else if (lastDate !== today) {
-                newStreak = 1;
-            }
-
-            await pool.query(
-                'UPDATE users SET points = points + $1, streak = $2, last_active_date = $3 WHERE id = $4',
-                [pointsEarned, newStreak, today, userId]
-            );
+            // Atomically update streak and points using DB date logic
+            // 1. If last activity was yesterday (CURRENT_DATE - 1), increment streak
+            // 2. If it was already today, keep existing streak
+            // 3. Otherwise (missed days or first time), reset to 1
+            await pool.query(`
+                UPDATE users 
+                SET 
+                    points = points + $1,
+                    streak = CASE 
+                        WHEN last_active_date = CURRENT_DATE THEN streak 
+                        WHEN last_active_date = CURRENT_DATE - INTERVAL '1 day' THEN streak + 1
+                        ELSE 1 
+                    END,
+                    last_active_date = CURRENT_DATE
+                WHERE id = $2
+            `, [pointsEarned, userId]);
         }
 
         res.json({
@@ -206,30 +200,25 @@ exports.submitInfiniteAnswer = async (req, res) => {
             [userId, question_id, selected_answer, isCorrect]
         );
 
-        // Award points and update streak if correct and first time answering
-        if (insertRes.rowCount > 0 && isCorrect) {
-            // Get current streak and last active date
-            const { rows: uRows } = await pool.query('SELECT streak, last_active_date FROM users WHERE id = $1', [userId]);
-            const user = uRows[0];
+        // 3. Award points and update streak if correct
+        if (isCorrect) {
+            // Atomically update streak and points
+            // Note: points are only awarded if it was NOT answered before (insertRes.rowCount > 0)
+            // But streak/activity is updated regardless for daily engagement
+            const pointsToAward = insertRes.rowCount > 0 ? 10 : 0;
 
-            const today = new Date().toISOString().split('T')[0];
-            const lastDate = user.last_active_date ? user.last_active_date.toISOString().split('T')[0] : null;
-
-            let newStreak = user.streak || 0;
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-            if (lastDate === yesterdayStr) {
-                newStreak += 1;
-            } else if (lastDate !== today) {
-                newStreak = 1;
-            }
-
-            await pool.query(
-                'UPDATE users SET points = points + 10, streak = $1, last_active_date = $2 WHERE id = $3',
-                [newStreak, today, userId]
-            );
+            await pool.query(`
+                UPDATE users 
+                SET 
+                    points = points + $1,
+                    streak = CASE 
+                        WHEN last_active_date = CURRENT_DATE THEN streak 
+                        WHEN last_active_date = CURRENT_DATE - INTERVAL '1 day' THEN streak + 1
+                        ELSE 1 
+                    END,
+                    last_active_date = CURRENT_DATE
+                WHERE id = $2
+            `, [pointsToAward, userId]);
         }
 
         await pool.query('COMMIT');
